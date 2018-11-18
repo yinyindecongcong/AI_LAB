@@ -18,14 +18,14 @@ struct Node
 {
 	char MAP[N][N];
 	int H; //估计函数
-	int alpha, beta;
 	int turn; //turn为1，下一步走黑棋
+	int alpha, beta;
 	vector<int> next_i;
 	vector<int> next_j;
 	vector<Node*> child;
 
 	Node(char M[N][N]=Start_Map, int t=1, int a=INT_MIN, int b=INT_MAX, int pos_i=-1, int pos_j=-1)
-	 :alpha(a),beta(b),turn(t){
+	 :turn(t),alpha(a),beta(b){
 		set_MAP(M);
 		if (pos_i != -1) move(pos_i, pos_j);
 		get_next_pos();
@@ -191,7 +191,7 @@ void make_tree_with_depth(Node* start, int& next_move, int turn=1, int length=0,
 		make_tree_with_depth(next, next_move, 1-turn, length+1, depth);
 		if (turn && next->beta > start->alpha) 
 			{start->alpha = next->beta; next_move = i;}
-		else if (!turn && next->alpha > start->beta)
+		else if (!turn && next->alpha < start->beta)
 			{start->beta = next->alpha; next_move = i;}
 	}
 }
@@ -258,6 +258,8 @@ void Game_start(){
 
 int main(){
 	Node *A = new Node();
-	make_tree_with_depth(A, A->turn, 0, 4);
+	int next_move = -1;
+	make_tree_with_depth(A, next_move, A->turn, 0, 4);
 	show_tree(A);
+	cout << "best move: " << A->next_i[next_move] << ' ' << A->next_j[next_move] << endl;
 }

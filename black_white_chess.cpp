@@ -51,6 +51,8 @@ struct Node
 			for (int j = 0; j < N; j++)
 				if (MAP[i][j] == '0') white++;
 				else if (MAP[i][j] == '1') black++;
+		if (next_i.size() == 0) 
+			return (white > black? INT_MIN: INT_MAX);
 		return black - white;
 	}
 
@@ -224,6 +226,7 @@ void Game_start(){
 	Node *temp = NULL;
 	int pos_i = -1, pos_j = -1;
 	int black, white;
+	int player = 1; //表示玩家为黑方
 	
 	while(!A->isGameOver()){
 		A->get_chess_num(black, white);
@@ -235,16 +238,29 @@ void Game_start(){
 		cout << " 可走的棋为：";
 		for (unsigned int i = 0; i < A->next_i.size(); i++)
 			cout << '(' << A->next_i[i] << ',' << A->next_j[i] << ") ";
-		cout << " 请输入落子的坐标(例: "<< A->next_i[0] << ' ' << A->next_j[0] << ")：";
-		cin >> pos_i >> pos_j;
-		while(pos_i >= N || pos_i < 0 || pos_j >= N || pos_j < 0 || A->MAP[pos_i][pos_j] != '*'){
-			cin.clear();
-			cin.sync();
-			cout << "\n 不是合法的坐标，请重新输入(例: "<< A->next_i[0] << ' ' << A->next_j[0] << ")：";
+		//玩家顺序
+		if (A->turn == player){
+			cout << " 请输入落子的坐标(例: "<< A->next_i[0] << ' ' << A->next_j[0] << ")：";
 			cin >> pos_i >> pos_j;
+			while(pos_i >= N || pos_i < 0 || pos_j >= N || pos_j < 0 || A->MAP[pos_i][pos_j] != '*'){
+				cin.clear();
+				cin.sync();
+				cout << "\n 不是合法的坐标，请重新输入(例: "<< A->next_i[0] << ' ' << A->next_j[0] << ")：";
+				cin >> pos_i >> pos_j;
+			}
+		}
+		//电脑顺序
+		else{
+			int next_move = -1;
+			cout << "\n 电脑计算中..." << endl;
+			make_tree_with_depth(A, next_move, A->turn, 0, 7);
+			pos_i = A->next_i[next_move];
+			pos_j = A->next_j[next_move];
+			cout << " 电脑计算结果：选择走(" << pos_i << ',' << pos_j << ")\n";
+			cout << "           H,alpha,beta=" << A->H << ',' << A->alpha << ',' << A->beta << endl;
 		}
 		temp = A;
-		A = new Node(A->MAP, 1 - A->turn, pos_i, pos_j);
+		A = new Node(A->MAP, 1 - A->turn, INT_MIN, INT_MAX, pos_i, pos_j);
 		delete temp;
 		temp = NULL;
 	}
@@ -257,9 +273,5 @@ void Game_start(){
 }
 
 int main(){
-	Node *A = new Node();
-	int next_move = -1;
-	make_tree_with_depth(A, next_move, A->turn, 0, 4);
-	show_tree(A);
-	cout << "best move: " << A->next_i[next_move] << ' ' << A->next_j[next_move] << endl;
+	Game_start();
 }

@@ -15,6 +15,8 @@ char Start_Map[N][N] = {
 	{' ',' ',' ',' ',' ',' '},
 	{' ',' ',' ',' ',' ',' '}
 };
+
+
 struct Node
 {
 	char MAP[N][N];
@@ -24,6 +26,7 @@ struct Node
 	vector<int> next_i;
 	vector<int> next_j;
 	vector<Node*> child;
+	int GameOver;
 
 	Node(char M[N][N]=Start_Map, int t=1, int a=INT_MIN, int b=INT_MAX, int pos_i=-1, int pos_j=-1);
 

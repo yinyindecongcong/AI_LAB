@@ -2,17 +2,18 @@
 
 void make_tree_with_depth(Node* start, int& next_move, int turn=1, int length=0, int depth=2){
 	//turn为1表示下一步走黑棋
-	if (length >= depth || start->isGameOver() || start->beta <= start->alpha){
+	if (length >= depth || start->next_i.size() == 0 || start->beta <= start->alpha){
 		start->alpha = max(start->alpha, start->H);
 		start->beta = min(start->beta, start->H);
 		return;
 	}
+	int next_move_tmp = -3;
 	for (unsigned int i = 0; i < start->next_i.size(); i++){
 		int next_x = start->next_i[i];
 		int next_y = start->next_j[i];
 		Node * next = new Node(start->MAP, 1-turn, start->alpha, start->beta, next_x, next_y);
 		start->child[i] = next;
-		make_tree_with_depth(next, next_move, 1-turn, length+1, depth);
+		make_tree_with_depth(next, next_move_tmp, 1-turn, length+1, depth);
 		if (turn && next->beta > start->alpha) 
 			{start->alpha = next->beta; next_move = i;}
 		else if (!turn && next->alpha < start->beta)
@@ -49,6 +50,7 @@ void Game_start(){
 	int pos_i = -1, pos_j = -1;
 	int black, white;
 	int player = 1; //表示玩家为黑方
+	int No_way = 0;
 	char choose;
 	cout << "              ==================" << endl;
 	cout << "             黑白棋游戏(黑方先手)" << endl;
@@ -66,31 +68,45 @@ void Game_start(){
 		cout << "               黑子：" << black << " 白子：" << white << endl;
 		cout << "              ==================" << endl;
 		A->show_map();
-		cout << " 可走的棋为：";
-		for (unsigned int i = 0; i < A->next_i.size(); i++)
-			cout << '(' << A->next_i[i] << ',' << A->next_j[i] << ") ";
-		//玩家顺序
-		if (A->turn == player){
-			cout << " 请输入落子的坐标(例: "<< A->next_i[0] << ' ' << A->next_j[0] << ")：";
-			cin >> pos_i >> pos_j;
-			while(pos_i >= N || pos_i < 0 || pos_j >= N || pos_j < 0 || A->MAP[pos_i][pos_j] != '*'){
+		if (A->next_i.size() == 0){
+			cout << " 当前方没有可走的棋，跳过当前轮" << endl;
+			pos_i = pos_j = -1;
+			if (++No_way == 2){
+				cout << "              ==================" << endl;
+				cout << "              双方均没有可走的棋，结束" << endl;
+				cout << "              ==================" << endl;
+				break;
+			}
+
+		}
+		else{
+			No_way = 0;
+			cout << " 可走的棋为：";
+			for (unsigned int i = 0; i < A->next_i.size(); i++)
+				cout << '(' << A->next_i[i] << ',' << A->next_j[i] << ") ";
+			//玩家顺序
+			if (A->turn == player){
+				cout << " 请输入落子的坐标(例: "<< A->next_i[0] << ' ' << A->next_j[0] << ")：";
+				cin >> pos_i >> pos_j;
+				while(pos_i >= N || pos_i < 0 || pos_j >= N || pos_j < 0 || A->MAP[pos_i][pos_j] != '*'){
+					cin.clear();
+					cin.sync();
+					cout << "\n 不是合法的坐标，请重新输入(例: "<< A->next_i[0] << ' ' << A->next_j[0] << ")：";
+					cin >> pos_i >> pos_j;
+				}
 				cin.clear();
 				cin.sync();
-				cout << "\n 不是合法的坐标，请重新输入(例: "<< A->next_i[0] << ' ' << A->next_j[0] << ")：";
-				cin >> pos_i >> pos_j;
 			}
-			cin.clear();
-			cin.sync();
-		}
-		//电脑顺序
-		else{
-			int next_move = -1;
-			cout << "\n 电脑计算中..." << endl;
-			make_tree_with_depth(A, next_move, A->turn, 0, 7);
-			pos_i = A->next_i[next_move];
-			pos_j = A->next_j[next_move];
-			cout << " 电脑计算结果：选择走(" << pos_i << ',' << pos_j << ")\n";
-			cout << "           H,alpha,beta=" << A->H << ',' << A->alpha << ',' << A->beta << endl;
+			//电脑顺序
+			else{
+				int next_move = -1;
+				cout << "\n 电脑计算中..." << endl;
+				make_tree_with_depth(A, next_move, A->turn, 0, 9);
+				pos_i = A->next_i[next_move];
+				pos_j = A->next_j[next_move];
+				cout << " 电脑计算结果：选择走(" << pos_i << ',' << pos_j << ")\n";
+				cout << "           H,alpha,beta=" << A->H << ',' << A->alpha << ',' << A->beta << endl;
+			}
 		}
 		temp = A;
 		A = new Node(A->MAP, 1 - A->turn, INT_MIN, INT_MAX, pos_i, pos_j);

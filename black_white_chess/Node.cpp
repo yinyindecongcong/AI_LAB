@@ -9,9 +9,12 @@ Node::Node(char M[N][N], int t, int a, int b, int pos_i, int pos_j):turn(t),alph
 }
 
 void Node::set_MAP(char M[N][N]){
+	GameOver = 1;
 	for (int i = 0; i < N; i++)
-		for (int j = 0; j < N; j++)
+		for (int j = 0; j < N; j++){
 			this->MAP[i][j] = M[i][j] == '*'? ' ': M[i][j];
+			if (this->MAP[i][j] == ' ') GameOver = 0;
+		}
 }
 
 void Node::get_next_pos(){
@@ -27,7 +30,7 @@ int Node::calc_H(){
 			if (MAP[i][j] == '0') white++;
 			else if (MAP[i][j] == '1') black++;
 	if (next_i.size() == 0) 
-		return (white > black? INT_MIN: INT_MAX);
+		return (white > black? -1000: 1000);
 	return black - white;
 }
 
@@ -140,7 +143,7 @@ void Node::show_map(){
 }
 
 bool Node::isGameOver(){
-	return next_i.empty();
+	return GameOver;
 }
 
 void Node::get_chess_num(int & black, int & white){

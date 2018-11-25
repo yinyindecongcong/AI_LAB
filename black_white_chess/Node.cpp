@@ -1,19 +1,18 @@
 #include "Node.h"
 
 Node::Node(char M[N][N], int t, int a, int b, int pos_i, int pos_j):turn(t),alpha(a),beta(b){
-	set_MAP(M);
+	set_MAP(M, pos_i, pos_j);
 	if (pos_i != -1) move(pos_i, pos_j);
 	get_next_pos();
-	H = calc_H();
 	child = vector<Node*>(next_i.size(), NULL);
 }
 
-void Node::set_MAP(char M[N][N]){
+void Node::set_MAP(char M[N][N], int pos_i, int pos_j){
 	GameOver = 1;
 	for (int i = 0; i < N; i++)
 		for (int j = 0; j < N; j++){
 			this->MAP[i][j] = M[i][j] == '*'? ' ': M[i][j];
-			if (this->MAP[i][j] == ' ') GameOver = 0;
+			if (this->MAP[i][j] == ' ' && (pos_i != i) && (pos_j != j)) GameOver = 0;
 		}
 }
 
@@ -24,14 +23,25 @@ void Node::get_next_pos(){
 }
 
 int Node::calc_H(){
-	int white = 0, black = 0;
+	int white = 0, black = 0, white_weight = 0, black_weight = 0;
 	for (int i = 0; i < N; i++)
 		for (int j = 0; j < N; j++)
-			if (MAP[i][j] == '0') white++;
-			else if (MAP[i][j] == '1') black++;
-	if (next_i.size() == 0) 
-		return (white > black? -1000: 1000);
-	return black - white;
+			if (MAP[i][j] == '0') {
+				white++;
+				white_weight += weight[i][j];
+			}
+			else if (MAP[i][j] == '1') {
+				black++;
+				black_weight += weight[i][j];
+			}
+	if (next_i.size() == 0 && !GameOver) 
+		if (turn == 1 && white > black) return -1000;
+		else if (turn == 0 && white < black) return 1000;
+	Node * temp = new Node(this->MAP, 1 - this->turn);
+	int black_move = (this->turn? next_i.size(): temp->next_i.size());
+	int white_move = (this->turn == 0? next_i.size(): temp->next_i.size());
+	delete temp;
+	return (black_weight - white_weight) + (black_move - white_move);
 }
 
 void Node::get_next_pos_with_ij(int i, int j){

@@ -16,6 +16,15 @@ char Start_Map[N][N] = {
 	{' ',' ',' ',' ',' ',' '}
 };
 
+int weight[N][N] = {
+	{10,1,5,5,1,10},
+	{1,1,1,1,1,1},
+	{5,1,1,1,1,5},
+	{5,1,1,1,1,5},
+	{1,1,1,1,1,1},
+	{10,1,5,5,1,10}
+};
+
 
 struct Node
 {
@@ -30,7 +39,7 @@ struct Node
 
 	Node(char M[N][N]=Start_Map, int t=1, int a=INT_MIN, int b=INT_MAX, int pos_i=-1, int pos_j=-1);
 
-	void set_MAP(char M[N][N]);
+	void set_MAP(char M[N][N], int pos_i, int pos_j);
 
 	void get_next_pos();
 
@@ -45,6 +54,7 @@ struct Node
 	bool isGameOver();
 
 	void get_chess_num(int & black, int & white);
+
 };
 
 #endif

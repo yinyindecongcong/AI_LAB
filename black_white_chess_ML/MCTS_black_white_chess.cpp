@@ -4,14 +4,11 @@
 #include <cmath>
 #include <time.h>
 #include <stdlib.h>
+#include <string>
 using namespace std;
 
 #define N 8
 
-#define BLACK_CHESS "\u25CF"//●
-#define WHITE_CHESS "\u25CB"//○
-#define CLICK_CHESS "\u00D7"
-#define VALID_CHESS "\u2605"
 
 int Start_Map[N][N] = {
 	{0,0,0,0,0,0,0,0},
@@ -23,11 +20,36 @@ int Start_Map[N][N] = {
 	{0,0,0,0,0,0,0,0},
 	{0,0,0,0,0,0,0,0}
 };
-char tochar(int a){
-	if (a == 2) return '*';
-	if (a == -1) return '0';
-	if (a == 0) return ' ';
-	return '1';
+
+/*
+int Start_Map[N][N] = {
+	{0,0,0,0,0,0,0,0},
+	{0,0,0,0,0,0,0,0},
+	{0,0,1,1,1,0,0,0},
+	{0,0,0,1,1,1,0,0},
+	{0,-1,-1,-1,1,1,1,0},
+	{0,0,0,-1,0,1,0,0},
+	{0,0,1,-1,-1,-1,-1,-1},
+	{0,0,0,0,0,0,0,0}
+};
+*/
+
+int weight[N][N] = {
+	{4,1,1,1,1,1,1,4},
+	{1,1,1,1,1,1,1,1},
+	{1,1,1,1,1,1,1,1},
+	{1,1,1,1,1,1,1,1},
+	{1,1,1,1,1,1,1,1},
+	{1,1,1,1,1,1,1,1},
+	{1,1,1,1,1,1,1,1},
+	{4,1,1,1,1,1,1,4}
+};
+const int STABLE_WEIGHT = 10;
+string tochar(int a){
+	if (a == 1) return "●";
+	if (a == -1) return "○";
+	if (a == 0) return "×";
+	return "  ";
 }
 
 struct State
@@ -165,29 +187,16 @@ struct State
 	}
 
 	void show_map(){
-		/*
-		cout << "  ";
+		
+		cout << "            ";
 		for (int i = 0; i < N; i++) cout << i << "  ";
 		for (int i = 0; i < N; i++){
-			cout << "\n" << i;
+			cout << "\n          " << i;
 			for (int j = 0; j < N; j++){
-				cout << ' ';
-				if (MAP[i][j] == 1) cout << "1";
-				else if (MAP[i][j] == -1) cout << "0";
-				else if (MAP[i][j] == 2) cout << "*";
-				else cout << MAP[i][j];
+				cout << ' ' << tochar(MAP[i][j]);
 			}
 		}
-		*/
-		for (int i = 0; i < N; i++){
-			cout << "           ";
-			for (int k = 0; k < 4 * N; k++) cout << '-';
-			cout << "\n           |";
-			for (int j = 0; j < N; j++){
-				cout << ' ' << tochar(this->MAP[i][j]) << " |";
-			}
-			cout << endl;
-		}
+		cout << endl;
 	}
 
 	void get_chess_num(int & black, int & white){
@@ -197,16 +206,27 @@ struct State
 				if (MAP[i][j] == 1) black++;
 				else if (MAP[i][j] == -1) white++;
 	}
+
+	bool isTerminal(){
+		bool end = false;
+		if (next_i.size() == 0){
+			set_MAP(MAP);
+			turn = -turn;
+			get_next_pos(false);
+			if (next_i.size() == 0) end = true;
+		}
+		return end;
+	}
 };
 
 /*蒙特卡洛搜索的节点*/
 struct Node{
 	State state;
-	double visit_times;
-	double quality_value;
+	double visit_times; //访问次数
+	double quality_value; //评分
 	Node * parent;
 	vector<Node *> children;
-	vector<int> not_used_pos_idx;
+	vector<int> not_used_pos_idx; //未探索的子节点下标列表
 	int chess_num;
 
 	Node(State s, Node * p=NULL):visit_times(0.0), quality_value(0.0){
@@ -232,12 +252,12 @@ Node * Expand(Node * node){
 	int choose_idx = rand() % node->not_used_pos_idx.size();
 	int pos_i = node->state.next_i[node->not_used_pos_idx[choose_idx]];
 	int pos_j = node->state.next_j[node->not_used_pos_idx[choose_idx]];
-	State * temp_state = new State(node->state);
-	temp_state->move(pos_i, pos_j);
-	State * sub_state = new State(temp_state->MAP, -temp_state->turn);
-	Node * sub_node = new Node(*sub_state, node);
+	State * temp_state = new State(node->state); 
+	temp_state->move(pos_i, pos_j); //更新棋盘
+	State * sub_state = new State(temp_state->MAP, -temp_state->turn); //创建棋盘
+	Node * sub_node = new Node(*sub_state, node);//创建节点
 	node->children[node->not_used_pos_idx[choose_idx]] = sub_node;
-	node->not_used_pos_idx.erase(node->not_used_pos_idx.begin() + choose_idx);
+	node->not_used_pos_idx.erase(node->not_used_pos_idx.begin() + choose_idx);//更新
 	return sub_node;
 }
 
@@ -268,30 +288,78 @@ Node * Selection(Node * node){
 	return node;
 }
 
+int evaluate(State& s, int com_turn){
+	int turn1 = 0, turn2 = 0;
+	for (int i = 0; i < N; i++)
+		for (int j = 0; j < N; j++)
+			if (s.MAP[i][j] == com_turn) turn1 += 1;
+			else if (s.MAP[i][j] == -com_turn) turn2 += 1;
+	return (turn1 > turn2? 20: -20);
+}
+
+bool stable(State * s, int i, int j){
+	int h = 2, v = 2, d1 = 2, d2 = 2;
+	for (int k = j - 1; k >= 0; k--) if (s->MAP[i][k] != s->turn) {h--; break;}
+	for (int k = j + 1; k < N; k++) if (s->MAP[i][k] != s->turn) {h--; break;}
+	for (int k = i - 1; k >= 0; k--) if (s->MAP[k][j] != s->turn) {v--; break;}
+	for (int k = i + 1; k < N; k++) if (s->MAP[k][j] != s->turn) {v--; break;}
+	for (int k = 1; i - k >= 0 && j - k >= 0; k++) 
+		if (s->MAP[i-k][j-k] != s->turn) {d1--; break;}
+	for (int k = 1; i + k < N && j + k < N; k++) 
+		if (s->MAP[i+k][j+k] != s->turn) {d1--; break;}
+	for (int k = 1; i - k >= 0 && j + k < N; k++) 
+		if (s->MAP[i-k][j+k] != s->turn) {d2--; break;}
+	for (int k = 1; i + k < N && j - k >= 0; k++) 
+		if (s->MAP[i+k][j-k] != s->turn) {d2--; break;}
+	return h && v && d1 && d2;
+}
 //模拟至游戏结束，得到当前节点的收益
 int Simulation(Node * node, int com_turn){
+	double p = 0;
+	double gamma = 0.9;
 	State * temp_state = new State(node->state);
 	int count = 0;
-	while (temp_state->next_i.size() && count + node->chess_num < 64){
+	while (!(node->chess_num + count == 64 ||temp_state->isTerminal())) {
 		int choose_idx = rand() % temp_state->next_i.size();
 		int pos_i = temp_state->next_i[choose_idx];
 		int pos_j = temp_state->next_j[choose_idx];
 		temp_state->move(pos_i, pos_j);
+		/*
+		if (stable(temp_state, pos_i, pos_j)){ //是否是稳定子 
+				p += (temp_state->turn == com_turn? 64-node->chess_num-count: node->chess_num + count - 64) * STABLE_WEIGHT * weight[pos_i][pos_j];
+		}
+		*/
 		State * tmp = temp_state;
 		temp_state = new State(temp_state->MAP, -temp_state->turn);
+		/*
+		if (node->chess_num + count < 35){
+			int me = 0, op = 0;
+			for (int i = 0; i < N; i++)
+				for (int j = 0; j < N; j++)
+					if (temp_state->MAP[i][j] == com_turn) me++;
+					else if (temp_state->MAP[i][j] == -com_turn) op++;
+			p += gamma * (op - me);
+		}
+		*/
 		delete tmp;
+		gamma *= gamma;
+		count ++;
 	}
 	int black, white;
 	temp_state->get_chess_num(black, white);
-	//delete temp_state
-	if (com_turn == -1) return white > black;
-	else return black > white;
+	//int score = evaluate(*temp_state, com_turn) + p;
+	delete temp_state;
+	if (com_turn == 1)return (black > white? 1: -1);
+	if (com_turn == -1)return (black > white? -1: 1);
+	//return score;
 }
 
-void Backpropagation(Node * node, int reward){
+void Backpropagation(Node * node, int reward, int com_turn){
 	while (node != NULL){
 		node->visit_times ++;
 		node->quality_value += reward;
+		// if (node->state.turn == com_turn) node->quality_value += reward;
+		// else node->quality_value -= reward;
 		node = node->parent;
 	}
 }
@@ -300,11 +368,11 @@ void MCTS(State& s, int& pos_i, int &pos_j, int com_turn){
 	clock_t start = clock();
 	Node * cur_node = new Node(s);
 	//int budget = 10;
-	while ((clock() - start) / CLOCKS_PER_SEC < 1){
+	while ((clock() - start) / CLOCKS_PER_SEC < 0.1){
 	//while (budget--){
 		Node * sub_node = Selection(cur_node);
 		int reward = Simulation(sub_node, com_turn);
-		Backpropagation(sub_node, reward);
+		Backpropagation(sub_node, reward, com_turn);
 	}
 	int idx;
 	clock_t end = clock();
@@ -314,7 +382,6 @@ void MCTS(State& s, int& pos_i, int &pos_j, int com_turn){
     cout << "total cost: " << (end - start) * 1.0 / CLOCKS_PER_SEC << endl;
     cout << "epoch: " << cur_node->visit_times << endl;
 	get_best_node(cur_node, idx, 0);
-    cout << "max win rate: " << cur_node->children[idx]->quality_value / cur_node->children[idx]->visit_times << endl;
 	pos_i = cur_node->state.next_i[idx];
 	pos_j = cur_node->state.next_j[idx];
 }
@@ -382,8 +449,8 @@ void Game_start(){
 				MCTS(*A, pos_i, pos_j, -player);
 				cout << " 电脑计算结果：选择走(" << pos_i << ',' << pos_j << ")\n";
 			}
+			A->move(pos_i, pos_j);
 		}
-		A->move(pos_i, pos_j);
 		temp = A;
 		A = new State(A->MAP, -A->turn);
 		delete temp;
@@ -398,6 +465,9 @@ void Game_start(){
 }
 
 int main(){
+	State * A = new State();
+	A->move(7,5);
+	cout << stable(A, 7, 5) << endl;
 	srand(time(0));
 	Game_start();
 }
